@@ -343,3 +343,74 @@ exports.registerDoctor = async (req, res) => {
     res.status(500).json({ message: 'Server error', error });
   }
 };
+
+exports.doctorForgotPassword = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const doctor = await Doctor.findOne({ email });
+    if (!doctor) {
+      return res.status(404).json({ message: 'Doctor not found' });
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    doctor.resetPasswordOTP = otp;
+    doctor.resetPasswordExpires = Date.now() + 15 * 60 * 1000;
+
+    await doctor.save();
+    await sendOtpEmail(doctor.email, otp);
+
+    res.status(200).json({ message: 'OTP sent to your email' });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+};
+
+exports.verifyOtpDoctor = async (req, res) => {
+  const { email, otp } = req.body;
+
+  try {
+    const doctor = await Doctor.findOne({
+      email,
+      resetPasswordOTP: otp,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!doctor) {
+      return res.status(400).json({ message: 'Invalid OTP or OTP expired' });
+    }
+
+    doctor.resetPasswordOTP = undefined;
+    doctor.resetPasswordExpires = undefined;
+    await doctor.save();
+
+    res.status(200).json({ message: 'OTP verified successfully' });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+};
+
+exports.doctorResetPassword = async (req, res) => {
+  const { email, newPassword } = req.body;
+
+  try {
+    const doctor = await Doctor.findOne({ email });
+
+    if (!doctor) {
+      return res.status(404).json({ message: 'Doctor not found' });
+    }
+
+    console.log('New password:', newPassword);
+
+    doctor.password = newPassword;
+
+    await doctor.save();
+
+    res.status(200).json({ message: 'Password reset successful' });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+};
