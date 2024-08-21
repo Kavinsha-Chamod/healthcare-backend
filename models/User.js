@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
 
 const UserSchema = new mongoose.Schema({
   firstName: { type: String, required: true },
@@ -10,16 +10,20 @@ const UserSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   gender: { type: String, required: true },
-  role: { type: String, required: true, enum: ['doctor', 'nurse', 'patient'] },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  role: { type: String, required: true, enum: ["doctor", "nurse", "patient"] },
   resetPasswordOTP: String,
   resetPasswordExpires: Date,
-  mfaSecret: String,  // Field to store MFA secret
-  mfaEnabled: { type: Boolean, default: false } 
+  mfaSecret: String, // Field to store MFA secret
+  mfaEnabled: { type: Boolean, default: false },
 });
 
 // Hash password before saving the user
-UserSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) {
+UserSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) {
     next();
   }
 
@@ -28,4 +32,4 @@ UserSchema.pre('save', async function (next) {
   next();
 });
 
-module.exports = mongoose.model('users', UserSchema);
+module.exports = mongoose.model("users", UserSchema);
