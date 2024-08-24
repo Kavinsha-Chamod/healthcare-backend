@@ -90,7 +90,7 @@ exports.login = async (req, res) => {
     }
 
     const payload = {
-      id: user.id,
+      id: user._id,
       role: user.role,
     };
 
@@ -293,7 +293,7 @@ exports.loginDoctor = async (req, res) => {
 
     // If MFA is valid, generate a JWT token
     const payload = {
-      id: doctor.id,
+      id: doctor._id,
       role: doctor.role,
     };
 
@@ -343,6 +343,33 @@ exports.registerDoctor = async (req, res) => {
     res.status(500).json({ message: 'Server error', error });
   }
 };
+
+// Get all available doctors
+exports.getAvailableDoctors = async (req, res) => {
+  try {
+    const doctors = await Doctor.find();
+    res.status(200).json(doctors);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+};
+
+// Get available times for a doctor
+exports.getDoctorAvailability = async (req, res) => {
+  const { doctorId } = req.params;
+  try {
+    const doctor = await Doctor.findById(doctorId);
+    if (!doctor) {
+      return res.status(404).json({ message: 'Doctor not found' });
+    }
+    res.status(200).json(doctor.availableTimes);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+};
+
 
 exports.doctorForgotPassword = async (req, res) => {
   const { email } = req.body;

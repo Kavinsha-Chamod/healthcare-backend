@@ -40,6 +40,12 @@ const doctorSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  availableTimes: [
+    {
+      date: { type: Date, required: true },
+      time: { type: String, required: true },
+    },
+  ],
   role: { type: String, required: true, enum: ['doctor', 'nurse', 'patient'] },
   resetPasswordOTP: String,
   resetPasswordExpires: Date,
@@ -67,6 +73,6 @@ doctorSchema.methods.comparePassword = async function (enteredPassword) {
 };
 
 // Create the model
-const Doctor = mongoose.model('Doctor', doctorSchema);
+const Doctor = mongoose.model('doctors', doctorSchema);
 
 module.exports = Doctor;
