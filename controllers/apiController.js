@@ -109,7 +109,7 @@ exports.addDefaultSlots = async (req, res) => {
 
   const dateString = date;
 
-  const timeSlots = Array.from({ length: 2 }, (_, i) => {
+  const timeSlots = Array.from({ length: 5 }, (_, i) => {
     const startHour = 10 + Math.floor(i / 2); 
     const startMinutes = i % 2 === 0 ? '00' : '30'; 
     const endMinutes = i % 2 === 0 ? '30' : '00'; 
