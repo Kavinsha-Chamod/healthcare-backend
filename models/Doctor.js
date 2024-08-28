@@ -42,8 +42,9 @@ const doctorSchema = new mongoose.Schema({
   },
   availableTimes: [
     {
-      date: { type: Date, required: true },
-      time: { type: String, required: true },
+      date: { type: Date },
+      time: { type: String },
+      isBooked: { type: Boolean, default: false },
     },
   ],
   role: { type: String, required: true, enum: ['doctor', 'nurse', 'patient'] },
