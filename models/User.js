@@ -14,7 +14,7 @@ const UserSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
-  role: { type: String, required: true, enum: ["doctor", "nurse", "patient"] },
+  role: { type: String, required: true, enum: ["doctor", "admin", "patient"] },
   resetPasswordOTP: String,
   resetPasswordExpires: Date,
   mfaSecret: String, // Field to store MFA secret

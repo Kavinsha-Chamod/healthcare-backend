@@ -6,6 +6,8 @@ const User = require('../models/User');
 const Doctor = require('../models/Doctor');
 const transporter = require('../config/nodemailer');
 const sendOtpEmail = require('../config/sendOTP');
+const { encrypt } = require('../config/encryption');
+
 const { secret, expiresIn } = require('../config/jwt');
 
 exports.sendMFA = async (req, res) => {
@@ -263,29 +265,29 @@ exports.loginDoctor = async (req, res) => {
   const { email, password, mfaCode } = req.body;
 
   try {
-    // Find the doctor by email
-    let doctor = await Doctor.findOne({ email });
+    // Find the doctor by email and exclude sensitive fields like password and mfaSecret
+    let doctor = await Doctor.findOne({ email }).select('-password -mfaSecret');
     if (!doctor) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
+    // Retrieve the password hash separately since it was excluded from the doctor object
+    const doctorWithPassword = await Doctor.findOne({ email });
+
     // Check if the password matches
-    const isMatch = await bcrypt.compare(password, doctor.password);
+    const isMatch = await bcrypt.compare(password, doctorWithPassword.password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    console.log('Stored MFA secret:', doctor.mfaSecret);
-
     // Verify MFA if enabled
     if (doctor.mfaEnabled) {
       const isMfaValid = speakeasy.totp.verify({
-        secret: doctor.mfaSecret,
+        secret: doctorWithPassword.mfaSecret, // Use the full object to access the mfaSecret
         encoding: 'base32',
         token: mfaCode,
         window: 2, // Allow 2-step window for time variance
       });
-      console.log('MFA code valid:', isMfaValid);
       if (!isMfaValid) {
         return res.status(400).json({ message: 'Invalid MFA code' });
       }
@@ -305,8 +307,6 @@ exports.loginDoctor = async (req, res) => {
   }
 };
 
-
-// Register a new doctor
 exports.registerDoctor = async (req, res) => {
   const { fullName, email, password, specialization, phone, licenseNumber, clinicAddress, role } = req.body;
 
@@ -317,8 +317,11 @@ exports.registerDoctor = async (req, res) => {
       return res.status(400).json({ message: 'Doctor with this email already exists' });
     }
 
-    // Check if doctor with the same license number already exists
-    const existingLicense = await Doctor.findOne({ licenseNumber });
+    // Encrypt the license number for the search
+    const encryptedLicenseNumber = encrypt(licenseNumber);
+
+    // Check if doctor with the same encrypted license number already exists
+    const existingLicense = await Doctor.findOne({ licenseNumber: encryptedLicenseNumber });
     if (existingLicense) {
       return res.status(400).json({ message: 'Doctor with this license number already exists' });
     }
@@ -330,7 +333,7 @@ exports.registerDoctor = async (req, res) => {
       password,
       specialization,
       phone,
-      licenseNumber,
+      licenseNumber: encryptedLicenseNumber, // Save encrypted license number
       clinicAddress,
       role
     });
@@ -340,20 +343,22 @@ exports.registerDoctor = async (req, res) => {
 
     res.status(201).json({ message: 'Doctor registered successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error });
+    res.status(500).json({ error: error.message });
   }
 };
 
-// Get all available doctors
 exports.getAvailableDoctors = async (req, res) => {
   try {
-    const doctors = await Doctor.find();
+    // Exclude the 'password' field from the result using 'select'
+    const doctors = await Doctor.find().select('-password -licenseNumber');
+    
     res.status(200).json(doctors);
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server error');
   }
 };
+
 
 // Get available times for a doctor
 exports.getDoctorAvailability = async (req, res) => {

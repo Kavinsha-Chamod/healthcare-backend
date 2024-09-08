@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const { encrypt, decrypt } = require('../config/encryption');
 
 const doctorSchema = new mongoose.Schema({
   fullName: {
@@ -47,30 +48,33 @@ const doctorSchema = new mongoose.Schema({
       isBooked: { type: Boolean, default: false },
     },
   ],
-  role: { type: String, required: true, enum: ['doctor', 'nurse', 'patient'] },
+  role: { type: String, required: true, enum: ['doctor', 'admin', 'patient'] },
   resetPasswordOTP: String,
   resetPasswordExpires: Date,
-  mfaSecret: String,  // Field to store MFA secret
-  mfaEnabled: { type: Boolean, default: false } 
+  mfaSecret: String,
+  mfaEnabled: { type: Boolean, default: false }
 });
 
-// Pre-save hook to hash password before saving it to the database
 doctorSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) {
-    return next();
+  if (this.isModified('licenseNumber')) {
+    this.licenseNumber = encrypt(this.licenseNumber);
   }
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    return next(error);
+
+  if (this.isModified('password')) {
+    try {
+      const salt = await bcrypt.genSalt(10);
+      this.password = await bcrypt.hash(this.password, salt);
+    } catch (error) {
+      return next(error);
+    }
   }
+
+  next();
 });
 
-// Compare password for login purposes
-doctorSchema.methods.comparePassword = async function (enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
+// Method to return the doctor's licenseNumber in decrypted form
+doctorSchema.methods.getDecryptedLicenseNumber = function () {
+  return decrypt(this.licenseNumber);
 };
 
 // Create the model
